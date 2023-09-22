@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { HttpApiProxyServer } from "../../proxy-server";
+import { HttpApiProxyServer } from "../../src";
 
 test.describe("Mocked API-Response to keep it the same for tests (without proxy server it changes over time)", () => {
   const server = new HttpApiProxyServer({

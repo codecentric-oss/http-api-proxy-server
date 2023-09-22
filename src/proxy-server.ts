@@ -80,7 +80,7 @@ export const printErrors = (
   const stat = response.status.toString();
   if (!settings?.hideErrors && hasError(response)) {
     if (response.body.errors)
-      response.body.errors.forEach(({ message }) =>
+      response.body.errors.forEach(({ message }: any) =>
         printError(stat, message, filePath)
       );
     else printError(stat, "Server Error", filePath);
