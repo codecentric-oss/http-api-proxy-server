@@ -7,7 +7,7 @@
     "test:unit": "jest --config=\"jest.config.ts\"",
     "test:unit:watch": "yarn run test:unit -- --watchAll",
     "use-case:tests": "yarn joke-webpage & sleep 2 && yarn e2e-playwright; kill $(lsof -t -i:8000)",
-    "joke-webpage": "python3 -m http.server 8000 --directory use-cases/tests/example-page 2> /dev/null",
+    "joke-webpage": "http-server use-cases/tests/example-page -p 8000 > /dev/null 2> /dev/null",
     "e2e-playwright": "yarn playwright test --config use-cases/tests/playwright.e2e.config.ts"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@playwright-testing-library/test": "^4.0.1",
     "@playwright/test": "1.28.1",
+    "http-server": "^14.1.1",
     "typescript": "^4.8.4"
   }
 }
