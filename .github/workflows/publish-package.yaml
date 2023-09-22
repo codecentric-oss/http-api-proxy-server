@@ -1,0 +1,44 @@
+name: Publish Package
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  test-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cloning GitHub Repository
+        uses: actions/checkout@v3
+
+      - name: Setting up NodeJS environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        run: yarn run test
+
+  publish-package:
+    needs: test-package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cloning GitHub Repository
+        uses: actions/checkout@v3
+        
+      - name: Setting up NodeJS environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run publish
+        run: yarn publish --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
