@@ -64,7 +64,3 @@ Here are some useful yarn commands, which you can run to test your setup and cha
 - test:unit : run all unit tests for the proxy server once
 - test:unit:watch : run all unit tests for the proxy server continuously while developing
 - use-case:tests : run an example which uses the proxy server to proxy an API for a webpage running in localhost
-
-## Current TODOs in Development:
-- add npm package https://www.npmjs.com/search?q=http-api-proxy-server
-- refactor some of the proxy server code, such that it uses a clean class structure.
