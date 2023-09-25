@@ -8,6 +8,7 @@
     "build": "rimraf dist && tsc && yarn build:check",
     "build:check": "cat dist/index.js dist/index.d.ts > /dev/null",
     "test": "yarn test:unit && yarn use-case:tests",
+    "lint": "echo TODO",
     "test:unit": "jest --config=\"jest.config.ts\"",
     "test:unit:watch": "yarn run test:unit -- --watchAll",
     "use-case:tests": "concurrently --success 'command-1' --kill-others 'yarn joke-webpage' 'sleep 2 && yarn e2e-playwright'",
