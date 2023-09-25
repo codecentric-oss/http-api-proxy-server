@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import { print } from "./print";
-import { IncomingMessage as Req } from "http";
-import * as path from "path";
+import path from "path";
 
 // Note: in jest one can test class function using jest.spyOn
 
@@ -10,6 +9,13 @@ type ResponseData = Record<string, unknown> & {
   errors?: { message: string }[];
 };
 type RequestId = `responseFor${string}`;
+type Request = {
+  requestId: RequestId;
+  url?: string;
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  body: string | undefined;
+};
 type ProxyResponse = {
   body: ResponseData;
   status: number;
@@ -17,15 +23,9 @@ type ProxyResponse = {
 
 export class ResponseCacheConnector {
   private cacheDirPath: string[];
-  // TODO import function instead
-  private requestToId: (req: Req) => RequestId;
 
-  constructor(
-    cacheDirPath: string[] = ["responses"],
-    requestIdFunction: (req: Req) => RequestId
-  ) {
+  constructor(cacheDirPath: string[] = ["responses"]) {
     this.cacheDirPath = cacheDirPath;
-    this.requestToId = requestIdFunction;
   }
 
   private requireDir() {
@@ -43,16 +43,16 @@ export class ResponseCacheConnector {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   };
 
-  saveResponse = (req: Req, response: ProxyResponse) => {
-    if (!req.url) {
+  saveResponse = (request: Request, response: ProxyResponse) => {
+    if (!request.url) {
       throw new Error(
         "[saveResponse] Cannot handle a request with missing URL"
       );
     }
 
     const responseDir = this.requireDir();
-    const fileName = this.filePathForRequest(req);
-    const logLine = `${fileName}, ${decodeURIComponent(req.url)}`;
+    const fileName = this.filePathForRequest(request);
+    const logLine = `${fileName}, ${decodeURIComponent(request.url)}`;
     try {
       fs.appendFileSync(
         // TODO create log name config
@@ -93,6 +93,6 @@ export class ResponseCacheConnector {
   private metaInfoFilePathForRequestId = (RequestId: string) =>
     path.join(path.join(...this.cacheDirPath), `${RequestId}.meta.json`);
 
-  filePathForRequest = (req: Req) =>
-    this.filePathForRequestId(this.requestToId(req));
+  filePathForRequest = (request: Request) =>
+    this.filePathForRequestId(request.requestId);
 }

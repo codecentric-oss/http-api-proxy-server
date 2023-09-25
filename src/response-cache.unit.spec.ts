@@ -1,24 +1,32 @@
-import { requestToId } from './proxy-server'
-import { ResponseCacheConnector } from './response-cache'
-import { IncomingMessage as Req } from 'http'
+import { Request, createRequestId } from "./proxy-server";
+import { ResponseCacheConnector } from "./response-cache";
 
-describe('ResponseCacheConnector', () => {
-  const req0415987281 = { url: '/graphql?mock' } as Req
-  //const reqOther = { url: '/graphql?test' } as Req
-  const cache = new ResponseCacheConnector(
-    ['test', 'responses', 'testName'],
-    requestToId,
-  )
+const createRequest = (overwrites: Partial<Request>): Request => ({
+  requestId: createRequestId({
+    url: overwrites.url ?? "/",
+    body: overwrites.body ?? undefined,
+  }),
+  method: "GET",
+  url: "/",
+  headers: {},
+  body: undefined,
+  ...overwrites,
+});
 
-  test('filePathForHash will build valid path', () => {
-    expect(cache.filePathForRequestId('hash')).toEqual(
-      'test/responses/testName/hash.json',
-    )
-  })
+describe("ResponseCacheConnector", () => {
+  const req1927740808 = createRequest({ url: "/graphql?mock" });
 
-  test('filePathForRequest will build valid path', () => {
-    expect(cache.filePathForRequest(req0415987281)).toEqual(
-      'test/responses/testName/responseFor0415987281.json',
-    )
-  })
-})
+  const cache = new ResponseCacheConnector(["test", "responses", "testName"]);
+
+  test("filePathForHash will build valid path", () => {
+    expect(cache.filePathForRequestId("hash")).toEqual(
+      "test/responses/testName/hash.json"
+    );
+  });
+
+  test("filePathForRequest will build valid path", () => {
+    expect(cache.filePathForRequest(req1927740808)).toEqual(
+      "test/responses/testName/responseFor1927740808.json"
+    );
+  });
+});

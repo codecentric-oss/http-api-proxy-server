@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import {
-  IncomingMessage as Req,
+  IncomingMessage,
   ServerResponse as Res,
   IncomingHttpHeaders,
   createServer,
@@ -20,9 +20,16 @@ export type HttpApiProxyServerSettings = {
   proxyPort: 80 | number;
 };
 type GraphQLCompatibleResponse = { errors?: { message: string }[] };
-type ResponseBody = (Record<string, unknown> & GraphQLCompatibleResponse) | any;
+type ResponseBody = Record<string, unknown> & GraphQLCompatibleResponse;
 const requestIdPrefix = "responseFor";
 type RequestId = `responseFor${string}`;
+export type Request = {
+  requestId: RequestId;
+  url?: string;
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  body: string | undefined;
+};
 type ProxyResponse = {
   body: ResponseBody;
   status: number;
@@ -35,30 +42,28 @@ type ProxyBehavior =
   | "NO_REQUEST_FORWARDING" // Just use the local response files AND return errors in case there is no fitting response file
   | "FORCE_UPDATE_ALL";
 const defaultProxyBehavior = "SAVE_RESPONSES_FOR_NEW_QUERIES";
-// TODO THINK ABOUT: putting the Options above (along with find from Settings) into separate yarn commands (and maybe own files)
 
 // TODO move into class
 export const generateResponseOverwriteCode = (
-  req: Req,
+  request: Request,
   potentialPathsForChanges: MatchPaths[],
   searchValue: string,
   filePath: string
 ) => {
-  const cacheDirPath = ["put", "your", "path", "here"];
-  const requestId = requestToId(req);
+  const cacheDirPathExample = ["put", "your", "path", "here"];
   // TODO update code
   return `You can change values containing "${searchValue}" as follows:
 
-    import ${requestId} from '${filePath}'
+    import ${request.requestId} from '${filePath}'
 
     ${potentialPathsForChanges
-      .map(({ path, value }) => `${requestId}${path} = ${value}\n`)
+      .map(({ path, value }) => `${request.requestId}${path} = ${value}\n`)
       .join("    ")}
 
     // Use the custom values like this:
     const proxyServer = new HttpApiProxyServer({
-      cacheDirPath: ${JSON.stringify(cacheDirPath)},
-      overwrites: {${requestId}},
+      cacheDirPath: ${JSON.stringify(cacheDirPathExample)},
+      overwrites: {${request.requestId}},
     })
 
     // Do not forget to run proxyServer.start() and proxyServer.stop() to use the proxy
@@ -80,7 +85,7 @@ export const printErrors = (
   const stat = response.status.toString();
   if (!settings?.hideErrors && hasError(response)) {
     if (response.body.errors)
-      response.body.errors.forEach(({ message }: any) =>
+      response.body.errors.forEach(({ message }) =>
         printError(stat, message, filePath)
       );
     else printError(stat, "Server Error", filePath);
@@ -88,13 +93,18 @@ export const printErrors = (
 };
 
 // TODO move into class
-export const requestToId = (req: Req): RequestId => {
-  if (!req.url) {
+export const createRequestId = ({
+  url,
+  body,
+}: {
+  url: string | undefined;
+  body: string | undefined;
+}): RequestId => {
+  if (!url) {
     throw new Error("[requestToId] Cannot handle a request with missing URL");
   }
-
   return (requestIdPrefix +
-    Array.from(req.url)
+    Array.from(JSON.stringify({ url, body }))
       .reduce((hash, char) => 0 | (31 * hash + char.charCodeAt(0)), 0)
       .toString()
       .replace("-", "0")) as RequestId; // because '-' would cause some problems in the code
@@ -126,7 +136,7 @@ export const findObjectPaths = (
 
 // TODO move into class
 export const printFindDeveloperHelp = (
-  req: Req,
+  request: Request,
   response: ProxyResponse,
   filePath: string,
   find: string | undefined
@@ -140,50 +150,58 @@ export const printFindDeveloperHelp = (
   if (responseValuePaths.length > matchMax)
     return printLimit(responseValuePaths.length, find, matchMax, filePath);
   return print(
-    generateResponseOverwriteCode(req, responseValuePaths, find, filePath)
+    generateResponseOverwriteCode(request, responseValuePaths, find, filePath)
   );
 };
 
 // TODO move into class
 export const printResponseLogs = (
   settings: { responsesToLog?: RequestId[] },
-  req: Req,
+  request: Request,
   response: ProxyResponse
 ) => {
-  if (settings.responsesToLog?.includes(requestToId(req)))
-    print(`${requestToId(req)}: ${JSON.stringify(response)}`);
+  if (settings.responsesToLog?.includes(request.requestId))
+    print(`${request.requestId}: ${JSON.stringify(response)}`);
 };
 
 // TODO Make sure only axios supported accept-encoding values are allowed by filtering list-strings like "gzip, deflate, br"
 /** This insures there will be no type errors when using headers in axios. It also replaces accept-encoding to make sure axios can handle.*/
-const convertHeaders = (headers: IncomingHttpHeaders) => ({
+const convertHeaders = (
+  headers: IncomingHttpHeaders,
+  host: string,
+  port: string
+) => ({
   ...Object.keys(headers).reduce(
     (obj, key) => ({ ...obj, [key]: headers[key]?.toString() ?? "" }),
     {}
   ),
+  // host and port need to be in the headers in order for the TLS handshake to work
+  host,
+  port,
   "accept-encoding": "gzip",
 });
 
-const getRequestBody = (req: Req): Promise<string> =>
+const getRequestBody = (req: IncomingMessage): Promise<string> =>
   new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
-      body += chunk.toString().split("\\n").join("\r\n");
+      body += chunk.toString();
+      // We used to include this "fix" which broke things later.
+      // body += chunk.toString().split("\\n").join("\r\n");
     });
     req.on("end", () => resolve(body));
     req.on("error", reject);
   });
 
 const convertToAxiosRequestConfig = async (
-  req: Req
+  request: Request,
+  host: string,
+  port: string
 ): Promise<AxiosRequestConfig> => ({
-  headers: convertHeaders(req.headers),
-  url: `${req.headers.port === "443" ? "https" : "http"}://${req.headers.host}${
-    req.url
-  }`,
-  method: req.method,
-  //TODO find out, why this workaround is needed and bodies of GET requests seem to break things (maybe getRequestBody is not written right/ see print in getRequestBody)
-  ...(req.method === "POST" ? { data: await getRequestBody(req) } : {}),
+  headers: convertHeaders(request.headers, host, port),
+  url: `${port === "443" ? "https" : "http"}://${host}${request.url}`,
+  method: request.method,
+  data: request.body,
 });
 
 /** @description Snapshots responses for request and provide them as stubs. */
@@ -225,20 +243,35 @@ export class HttpApiProxyServer {
     this.overwrites = clone(overwrites);
     this.initialSettings = this.settings;
     this.initialOverwrites = this.overwrites;
-    // TODO do not pass requestToId but import inside ResponseCacheConnector
-    this.cache = new ResponseCacheConnector(cacheDirPath, requestToId);
+    this.cache = new ResponseCacheConnector(cacheDirPath);
 
-    this.httpServer = createServer((req, res) => {
-      this.resolveRequest(req).then((response) => {
-        this.printReplacementCharAlert(JSON.stringify(response.body), req);
-        this.printConsoleFeedback(req, response);
+    this.httpServer = createServer(async (req, res) => {
+      const url = req.url;
+      const body =
+        req.method === "POST" ? await getRequestBody(req) : undefined;
+      const requestId = createRequestId({ url, body });
+
+      const request: Request = {
+        requestId,
+        url,
+        body,
+        method: req.method,
+        headers: req.headers,
+      };
+
+      this.resolveRequest(request).then((response) => {
+        this.printReplacementCharAlert(JSON.stringify(response.body), request);
+        this.printConsoleFeedback(request, response);
         this.replyToClient(res, response);
       });
     });
   }
 
-  private printReplacementCharAlert = (stringValue: string, req: Req) => {
-    if (this.cache.getMetaInfo(requestToId(req))["ignoreBrockenChars"]) return;
+  private printReplacementCharAlert = (
+    stringValue: string,
+    request: Request
+  ) => {
+    if (this.cache.getMetaInfo(request.requestId)["ignoreBrockenChars"]) return;
     const replacementChar = /\uFFFD/g;
     const brockenChars = JSON.stringify(stringValue).match(replacementChar);
     if (brockenChars?.length) {
@@ -249,7 +282,7 @@ export class HttpApiProxyServer {
           brockenChars.length > 99
             ? `${brockenChars.join(", ").slice(0, 99)}...`
             : brockenChars.join(", ")
-        } in ${this.cache.filePathForRequest(req)}`
+        } in ${this.cache.filePathForRequest(request)}`
       );
     }
   };
@@ -257,44 +290,50 @@ export class HttpApiProxyServer {
   private getLocalResponseIfExists = (requestId: RequestId) =>
     this.overwrites[requestId] || this.cache.getResponse(requestId) || null;
 
-  private resolveRequest = async (req: Req): Promise<ProxyResponse> => {
-    const requestId = requestToId(req);
-    const localResponse = this.getLocalResponseIfExists(requestId);
+  private resolveRequest = async (request: Request): Promise<ProxyResponse> => {
+    const localResponse = this.getLocalResponseIfExists(request.requestId);
+
     switch (this.settings.proxyBehavior) {
       case "FORCE_UPDATE_ALL":
-        return this.getApiResponseAndSaveToLocal(req);
+        return this.getApiResponseAndSaveToLocal(request);
 
       case "SAVE_RESPONSES_FOR_NEW_QUERIES":
-        return localResponse || this.getApiResponseAndSaveToLocal(req);
+        return localResponse || this.getApiResponseAndSaveToLocal(request);
 
       case "RELOAD_RESPONSES_WITH_ERRORS":
         return localResponse && !hasError(localResponse)
           ? localResponse
-          : this.getApiResponseAndSaveToLocal(req);
+          : this.getApiResponseAndSaveToLocal(request);
 
       case "NO_REQUEST_FORWARDING":
         if (localResponse) return localResponse;
         else
           throw Error(
-            `[HttpApiProxyServer proxyBehavior is set to ${this.settings.proxyBehavior}] No ${requestId} stored in the proxy cache`
+            `[HttpApiProxyServer proxyBehavior is set to ${this.settings.proxyBehavior}] No ${request.requestId} stored in the proxy cache`
           );
     }
     return localResponse;
   };
 
   private getApiResponseAndSaveToLocal = async (
-    req: Req
+    request: Request
   ): Promise<ProxyResponse> => {
-    const apiResponse = await this.realApiResponse(req);
-    this.cache.saveResponse(req, apiResponse);
+    const apiResponse = await this.realApiResponse(request);
+    this.cache.saveResponse(request, apiResponse);
     return apiResponse;
   };
 
-  private realApiResponse = async (req: Req): Promise<ProxyResponse> => {
-    req.headers.host = this.settings.sourceHost;
-    req.headers.port = this.settings.sourcePort.toString();
+  private realApiResponse = async (
+    request: Request
+  ): Promise<ProxyResponse> => {
+    const host = this.settings.sourceHost;
+    const port = this.settings.sourcePort.toString();
     try {
-      const requestConfig = await convertToAxiosRequestConfig(req);
+      const requestConfig = await convertToAxiosRequestConfig(
+        request,
+        host,
+        port
+      );
       const { data, status } = await axios(requestConfig);
       return { body: data, status };
     } catch (error) {
@@ -304,7 +343,7 @@ export class HttpApiProxyServer {
         body: {
           errors: [
             {
-              message: `[HttpApiProxyServer] No successful response from ${req.headers.host}`,
+              message: `[HttpApiProxyServer] No successful response from ${host}`,
             },
             axiosError.toJSON() as { message: string },
           ],
@@ -315,12 +354,14 @@ export class HttpApiProxyServer {
   };
 
   /** Prints console outputs depending on its inputs. No output is also possible */
-  private printConsoleFeedback = (req: Req, response: ProxyResponse) => {
-    const filePath = this.cache.filePathForRequest(req);
-    // TODO cleanup parameter order (once in class)
-    printFindDeveloperHelp(req, response, filePath, this.settings?.find);
+  private printConsoleFeedback = (
+    request: Request,
+    response: ProxyResponse
+  ) => {
+    const filePath = this.cache.filePathForRequest(request);
+    printFindDeveloperHelp(request, response, filePath, this.settings?.find);
     printErrors(response, this.settings, filePath);
-    printResponseLogs(this.settings, req, response);
+    printResponseLogs(this.settings, request, response);
   };
 
   // TODO Test using to have been called with (put handles in other function)
