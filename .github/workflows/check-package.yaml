@@ -15,7 +15,7 @@ jobs:
       - name: Setting up NodeJS environment
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 20
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
@@ -38,7 +38,7 @@ jobs:
       - name: Setting up NodeJS environment
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 20
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
@@ -58,7 +58,7 @@ jobs:
       - name: Setting up NodeJS environment
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 20
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
