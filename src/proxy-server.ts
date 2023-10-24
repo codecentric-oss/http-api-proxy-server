@@ -369,8 +369,7 @@ export class HttpApiProxyServer {
     res: Res,
     { body: apiResponseBody, status: apiResponseStatus }: ProxyResponse
   ) => {
-    res.writeHead(apiResponseStatus, { "Content-Type": "application/json" }); // TODO check why or if needed
-    res.writeHead(apiResponseStatus, { "Access-Control-Allow-Origin": "*" });
+    res.writeHead(apiResponseStatus, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }); // TODO check why or if needed
     res.end(JSON.stringify(apiResponseBody));
   };
 
