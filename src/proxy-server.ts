@@ -22,7 +22,7 @@ export type HttpApiProxyServerSettings = {
 type GraphQLCompatibleResponse = { errors?: { message: string }[] };
 type ResponseBody = Record<string, unknown> & GraphQLCompatibleResponse;
 const requestIdPrefix = "responseFor";
-type RequestId = `responseFor${string}`;
+export type RequestId = `responseFor${string}`;
 export type Request = {
   requestId: RequestId;
   url?: string;
@@ -30,9 +30,10 @@ export type Request = {
   headers: Record<string, string | string[] | undefined>;
   body: string | undefined;
 };
-type ProxyResponse = {
-  body: ResponseBody;
+export type ProxyResponse = {
   status: number;
+  headers?: Record<string, unknown>;
+  body: ResponseBody;
 };
 type ProxyResponses = Record<RequestId, ProxyResponse>;
 type MatchPaths = { value: string; path: string };
@@ -42,6 +43,12 @@ type ProxyBehavior =
   | "NO_REQUEST_FORWARDING" // Just use the local response files AND return errors in case there is no fitting response file
   | "FORCE_UPDATE_ALL";
 const defaultProxyBehavior = "SAVE_RESPONSES_FOR_NEW_QUERIES";
+
+// This will be used in case no headers were found with a (saved, or overwrite) response
+export const fallbackHeaders = {
+  "content-type": "application/json",
+  "access-control-allow-origin": "*",
+};
 
 // TODO move into class
 export const generateResponseOverwriteCode = (
@@ -288,7 +295,9 @@ export class HttpApiProxyServer {
   };
 
   private getLocalResponseIfExists = (requestId: RequestId) =>
-    this.overwrites[requestId] || this.cache.getResponse(requestId) || null;
+    this.overwrites[requestId]
+      ? { headers: fallbackHeaders, ...this.overwrites[requestId] }
+      : this.cache.getResponse(requestId) || null;
 
   private resolveRequest = async (request: Request): Promise<ProxyResponse> => {
     const localResponse = this.getLocalResponseIfExists(request.requestId);
@@ -312,6 +321,10 @@ export class HttpApiProxyServer {
             `[HttpApiProxyServer proxyBehavior is set to ${this.settings.proxyBehavior}] No ${request.requestId} stored in the proxy cache`
           );
     }
+    if (localResponse === null)
+      throw Error(
+        `Faild to resolve ${request.requestId} for url: ${request.url}`
+      );
     return localResponse;
   };
 
@@ -334,12 +347,14 @@ export class HttpApiProxyServer {
         host,
         port
       );
-      const { data, status } = await axios(requestConfig);
-      return { body: data, status };
+      const { status, headers, data } = await axios(requestConfig);
+      return { status, headers, body: data };
     } catch (error) {
       const axiosError = error as AxiosError;
       print(`Error ${axiosError.code}: ${axiosError.message}`);
       return {
+        status: parseInt(axiosError.status?.toString() ?? "500"),
+        headers: {},
         body: {
           errors: [
             {
@@ -348,7 +363,6 @@ export class HttpApiProxyServer {
             axiosError.toJSON() as { message: string },
           ],
         },
-        status: parseInt(axiosError.status?.toString() ?? "500"),
       };
     }
   };
@@ -367,9 +381,17 @@ export class HttpApiProxyServer {
   // TODO Test using to have been called with (put handles in other function)
   private replyToClient = (
     res: Res,
-    { body: apiResponseBody, status: apiResponseStatus }: ProxyResponse
+    {
+      status: apiResponseStatus,
+      headers: apiResponseHeaders,
+      body: apiResponseBody,
+    }: ProxyResponse
   ) => {
-    res.writeHead(apiResponseStatus, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }); // TODO check why or if needed
+    res.writeHead(apiResponseStatus, {
+      ...apiResponseHeaders,
+      "access-control-allow-origin": "*", // to avoid issues due to the different host of the proxy-server
+      // axios response headers are always lowercase, such that we can rely the overwrites will fit.
+    });
     res.end(JSON.stringify(apiResponseBody));
   };
 

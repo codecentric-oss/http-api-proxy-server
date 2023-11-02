@@ -1,25 +1,9 @@
 import * as fs from "fs";
 import { print } from "./print";
 import path from "path";
+import { fallbackHeaders, ProxyResponse, Request } from "./proxy-server";
 
 // Note: in jest one can test class function using jest.spyOn
-
-// TODO import types
-type ResponseData = Record<string, unknown> & {
-  errors?: { message: string }[];
-};
-type RequestId = `responseFor${string}`;
-type Request = {
-  requestId: RequestId;
-  url?: string;
-  method?: string;
-  headers: Record<string, string | string[] | undefined>;
-  body: string | undefined;
-};
-type ProxyResponse = {
-  body: ResponseData;
-  status: number;
-};
 
 export class ResponseCacheConnector {
   private cacheDirPath: string[];
@@ -37,10 +21,17 @@ export class ResponseCacheConnector {
     return currentDir;
   }
 
-  getResponse = (requestId: string) => {
+  getResponse = (requestId: string): ProxyResponse | null => {
     const filePath = this.filePathForRequestId(requestId);
     if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const fileContentAsJson = JSON.parse(
+      fs.readFileSync(filePath, "utf8")
+    ) as ProxyResponse;
+    return {
+      status: fileContentAsJson.status,
+      headers: fileContentAsJson.headers || fallbackHeaders,
+      body: fileContentAsJson.body,
+    };
   };
 
   saveResponse = (request: Request, response: ProxyResponse) => {
