@@ -387,12 +387,15 @@ export class HttpApiProxyServer {
       body: apiResponseBody,
     }: ProxyResponse
   ) => {
+    const bodyData = JSON.stringify(apiResponseBody);
+    const bodyLength = Buffer.byteLength(bodyData);
     res.writeHead(apiResponseStatus, {
       ...apiResponseHeaders,
+      "content-length": bodyLength.toString(), //since re-stringifying may slightly change length
       "access-control-allow-origin": "*", // to avoid issues due to the different host of the proxy-server
       // axios response headers are always lowercase, such that we can rely the overwrites will fit.
     });
-    res.end(JSON.stringify(apiResponseBody));
+    res.end(bodyData);
   };
 
   /** @description adding and overwrites by object key */
