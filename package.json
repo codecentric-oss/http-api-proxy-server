@@ -2,6 +2,10 @@
   "name": "http-api-proxy-server",
   "version": "0.0.8",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codecentric-oss/http-api-proxy-server"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
