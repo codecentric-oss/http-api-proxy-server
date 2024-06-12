@@ -37,7 +37,9 @@ export class ResponseCacheConnector {
   saveResponse = (request: Request, response: ProxyResponse) => {
     if (!request.url) {
       throw new Error(
-        "[saveResponse] Cannot handle a request with missing URL"
+        `[saveResponse] Cannot handle a request with missing URL: ${JSON.stringify(
+          request
+        )}`
       );
     }
 

@@ -99,7 +99,7 @@ export const printErrors = (
   }
 };
 
-// TODO move into class
+// TODO move into class and improve Error
 export const createRequestId = ({
   url,
   body,
@@ -318,13 +318,15 @@ export class HttpApiProxyServer {
         if (localResponse) return localResponse;
         else
           throw Error(
-            `[HttpApiProxyServer proxyBehavior is set to ${this.settings.proxyBehavior}] No ${request.requestId} stored in the proxy cache`
+            `[HttpApiProxyServer proxyBehavior is set to ${
+              this.settings.proxyBehavior
+            }] Response not stored in the proxy cache! Request Details: ${JSON.stringify(
+              request
+            )}`
           );
     }
     if (localResponse === null)
-      throw Error(
-        `Faild to resolve ${request.requestId} for url: ${request.url}`
-      );
+      throw Error(`Faild to resolve request: ${JSON.stringify(request)}`);
     return localResponse;
   };
 
