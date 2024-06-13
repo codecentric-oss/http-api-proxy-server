@@ -19,7 +19,9 @@ export type HttpApiProxyServerSettings = {
   sourcePort: 443 | number;
   proxyPort: 80 | number;
 };
-type GraphQLCompatibleResponse = { errors?: { message: string }[] };
+type GraphQLCompatibleResponse = {
+  errors?: { message: string; status?: number }[];
+};
 type ResponseBody = Record<string, unknown> & GraphQLCompatibleResponse;
 const requestIdPrefix = "responseFor";
 export type RequestId = `responseFor${string}`;
@@ -354,16 +356,16 @@ export class HttpApiProxyServer {
     } catch (error) {
       const axiosError = error as AxiosError;
       print(`Error ${axiosError.code}: ${axiosError.message}`);
+      const forwardedErrorStatusCode = axiosError.response?.status;
+      const message =
+        forwardedErrorStatusCode === undefined
+          ? `[HttpApiProxyServer] Not able to extract Error code from response of ${host}`
+          : `[HttpApiProxyServer] No successful response from ${host}`;
       return {
-        status: parseInt(axiosError.status?.toString() ?? "500"),
+        status: forwardedErrorStatusCode ?? 500,
         headers: {},
         body: {
-          errors: [
-            {
-              message: `[HttpApiProxyServer] No successful response from ${host}`,
-            },
-            axiosError.toJSON() as { message: string },
-          ],
+          errors: [{ message }, axiosError.toJSON() as { message: string }],
         },
       };
     }

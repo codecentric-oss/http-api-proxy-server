@@ -44,3 +44,46 @@ test.describe("Mocked API-Response to keep it the same for tests (without proxy 
     server.resetOverwrites();
   });
 });
+
+test.describe("Mocked API-Error-Responses without spamming your APIs Error logging", () => {
+  const server = new HttpApiProxyServer({
+    cacheDirPath: ["use-cases", "tests", "error-responses"],
+    settings: {
+      proxyBehavior: "FORCE_UPDATE_ALL",
+      sourceHost: "httpbin.org",
+      sourcePort: 443,
+      proxyPort: 8080,
+    },
+  });
+  test.beforeAll(async () => await server.start());
+  test.afterAll(async () => await server.stop());
+
+  test.describe("should forward Error code", () => {
+    for (const statusCode of [301, 400, 403, 404, 500, 503]) {
+      test(statusCode.toString(), async ({ request }) => {
+        let responseCode = 0;
+        try {
+          responseCode = (
+            await request.get(`http://0.0.0.0:8080/status/${statusCode}`)
+          ).status();
+        } catch {
+          expect(responseCode).toBe(statusCode);
+        }
+      });
+    }
+  });
+
+  test("forwarding codes are resolved and not teated as errors", async ({
+    request,
+  }) => {
+    let responseCode = 0;
+    try {
+      responseCode = (
+        await request.get(`http://0.0.0.0:8080/status/${301}`)
+      ).status();
+    } catch {
+      expect(responseCode).not.toBe(301);
+    }
+    expect(responseCode).toBe(200);
+  });
+});
