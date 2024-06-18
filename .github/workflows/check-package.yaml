@@ -5,9 +5,13 @@ on:
 
 jobs:
   test-package:
-    name: Test package
-    runs-on: ubuntu-latest
+    name: Lint, Test and Build
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x, 'lts/*']
+        os: [ubuntu-latest]
     steps:
       - name: Cloning GitHub Repository
         uses: actions/checkout@v3
@@ -15,7 +19,7 @@ jobs:
       - name: Setting up NodeJS environment
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
@@ -24,45 +28,11 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run tests
-        run: yarn run test
-
-  lint-package:
-    name: Lint package
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Cloning GitHub Repository
-        uses: actions/checkout@v3
-
-      - name: Setting up NodeJS environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org/
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
       - name: Run linter
         run: yarn run lint
 
-  build-package:
-    name: Build package
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Cloning GitHub Repository
-        uses: actions/checkout@v3
-
-      - name: Setting up NodeJS environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org/
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - name: Run tests
+        run: yarn run test
 
       - name: Build package
         run: yarn run build
