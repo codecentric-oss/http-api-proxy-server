@@ -11,7 +11,8 @@ jobs:
     strategy:
       matrix:
         node-version: [16.x, 18.x, 20.x, 'lts/*']
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: true
     steps:
       - name: Cloning GitHub Repository
         uses: actions/checkout@v3
