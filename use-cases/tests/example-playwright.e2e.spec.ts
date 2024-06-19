@@ -15,7 +15,7 @@ test.describe("Mocked API-Response to keep it the same for tests (without proxy 
   test.afterAll(async () => await server.stop());
 
   test("Test Page is up", async ({ page }) => {
-    await page.goto("http://127.0.0.1:8000/");
+    await page.goto("http://0.0.0.0:8000/");
     const button = page.getByText("Get Joke");
     await expect(button).toBeVisible();
   });
@@ -23,7 +23,7 @@ test.describe("Mocked API-Response to keep it the same for tests (without proxy 
   test("proxy allows to test page displays a joke from the API ", async ({
     page,
   }) => {
-    await page.goto("http://127.0.0.1:8000/");
+    await page.goto("http://0.0.0.0:8000/");
     const button = page.getByText("Get Joke");
     await button.click();
     const text = page.getByText(
@@ -36,7 +36,7 @@ test.describe("Mocked API-Response to keep it the same for tests (without proxy 
     responseFor0258897338.body.setup = "Joke-Setup";
     responseFor0258897338.body.punchline = "Punchline";
     server.modifyOverwrites({ responseFor0258897338 });
-    await page.goto("http://127.0.0.1:8000/");
+    await page.goto("http://0.0.0.0:8000/");
     const button = page.getByText("Get Joke");
     await button.click();
     const text = page.getByText("Joke-Setup Punchline");
@@ -64,7 +64,7 @@ test.describe("Mocked API-Error-Responses without spamming your APIs Error loggi
         let responseCode = 0;
         try {
           responseCode = (
-            await request.get(`http://127.0.0.1:8000/status/${statusCode}`)
+            await request.get(`http://0.0.0.0:8080/status/${statusCode}`)
           ).status();
         } catch {
           expect(responseCode).toBe(statusCode);
@@ -79,7 +79,7 @@ test.describe("Mocked API-Error-Responses without spamming your APIs Error loggi
     let responseCode = 0;
     try {
       responseCode = (
-        await request.get(`http://127.0.0.1:8000/status/${301}`)
+        await request.get(`http://0.0.0.0:8080/status/${301}`)
       ).status();
     } catch {
       expect(responseCode).not.toBe(301);
