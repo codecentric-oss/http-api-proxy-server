@@ -10,7 +10,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x, 'lts/*']
+        node-version: [18.x, 20.x, 'lts/*']
         os: [ubuntu-latest]
     steps:
       - name: Cloning GitHub Repository
@@ -38,7 +38,7 @@ jobs:
         run: npm run build
 
   publish-package:
-    if: ${{ github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ github.event.workflow_run.head_branch == 'conventional-commits-and-auto-releases' }}
     needs: test-package
     runs-on: ubuntu-latest
     steps:
