@@ -1,4 +1,4 @@
-name: Check package
+name: Check Package
 
 on:
   push
@@ -7,7 +7,7 @@ jobs:
   test-package:
     name: Lint, Test and Build
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       matrix:
         node-version: [16.x, 18.x, 20.x, 'lts/*']
