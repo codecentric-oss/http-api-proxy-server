@@ -23,16 +23,16 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
       - name: Run linter
-        run: yarn run lint
+        run: npm run lint
 
       - name: Run tests
-        run: yarn run test
+        run: npm run test
 
       - name: Build package
-        run: yarn run build
+        run: npm run build

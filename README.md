@@ -58,7 +58,7 @@ We decided to open source our solution, to enable anyone to use it in a similar 
 
 # Contributing in the HttpApiProxyServer development
 
-Here are some useful yarn commands, which you can run to test your setup and changes when editing the code of the HttpApiProxyServer.
+Here are some useful npm commands, which you can run to test your setup and changes when editing the code of the HttpApiProxyServer.
 
 - test : run all tests once
 - test:unit : run all unit tests for the proxy server once
