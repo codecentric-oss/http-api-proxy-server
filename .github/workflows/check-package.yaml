@@ -1,15 +1,13 @@
-name: Check Package
+name: Test (and publish if on main)
 
 on:
   push:
     branches: [main, conventional-commits-and-auto-releases]
   pull_request:
     branches: '*'
-  workflow_dispatch:
-  
 
 jobs:
-  test-package:
+  quality-check:
     name: Lint, Test and Build
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -41,3 +39,29 @@ jobs:
 
       - name: Build package
         run: npm run build
+
+  publish:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+    needs: [quality-check]
+    steps:
+      - name: Cloning GitHub Repository
+        uses: actions/checkout@v3
+
+      - name: Setting up NodeJS environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release
+        run: echo "TODO run semantic-release"
+
+  testing-publish-trigger:
+    runs-on: ubuntu-latest
+    needs: [quality-check]
+    steps:
+      - name: Release
+        run: echo "TODO run semantic-release TODO only on main"
