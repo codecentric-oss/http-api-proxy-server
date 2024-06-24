@@ -8,8 +8,7 @@ on:
 
 jobs:
   publish-package:
-    if: ${{ github.event.workflow_run.head_branch == 'conventional-commits-and-auto-releases' }}
     runs-on: ubuntu-latest
     steps:
       - name: Test Step
-        run: echo "Should not run if not on FAKE main"
+        run: echo "workflow_run ${{ github.event.workflow_run.head_branch }}"
