@@ -2,9 +2,10 @@ name: Check Package
 
 on:
   push:
-    branches: [main]
+    branches: [main, conventional-commits-and-auto-releases]
   pull_request:
     branches: '*'
+  workflow_dispatch:
   
 
 jobs:
