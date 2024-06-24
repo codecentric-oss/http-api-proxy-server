@@ -1,6 +1,6 @@
 {
   "name": "http-api-proxy-server",
-  "version": "0.0.10",
+  "version": "0.0.0-development",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,7 +22,7 @@
     "joke-webpage": "http-server use-cases/tests/example-page -p 8000 > /dev/null 2> /dev/null",
     "e2e-playwright": "npx playwright test --config use-cases/tests/playwright.e2e.config.ts",
     "prepublish": "npm run build",
-    "semantic-release": "semantic-release -branches main",
+    "semantic-release": "semantic-release --branches main",
     "commit": "git-cz"
   },
   "dependencies": {
