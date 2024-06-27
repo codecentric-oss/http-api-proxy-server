@@ -2,9 +2,9 @@ name: Test (and publish if on main)
 
 on:
   push:
-    branches: [main, conventional-commits-and-auto-releases]
-  pull_request:
     branches: '*'
+  pull_request:
+    branches: [ main ]
 
 jobs:
   quality-check:
@@ -60,5 +60,5 @@ jobs:
         run: npm run semantic-release
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.semantic-release-proxy-server }}
 
