@@ -73,6 +73,32 @@ test.describe("Mocked API-Error-Responses without spamming your APIs Error loggi
     }
   });
 
+  test.describe("proxy error payload behavior for code", () => {
+    for (const statusCode of [400, 403, 404]) {
+      test(`${statusCode} should not return custom error format`, async ({
+        request,
+      }) => {
+        const response = await request.get(
+          `http://0.0.0.0:8080/status/${statusCode}`
+        );
+        const data = await response.text();
+        expect(JSON.stringify(data)).not.toContain("[HttpApiProxyServer]");
+      });
+    }
+
+    for (const statusCode of [500, 503]) {
+      test(`${statusCode} should return custom error format`, async ({
+        request,
+      }) => {
+        const response = await request.get(
+          `http://0.0.0.0:8080/status/${statusCode}`
+        );
+        const data = await response.json();
+        expect(JSON.stringify(data)).toContain("[HttpApiProxyServer]");
+      });
+    }
+  });
+
   test("forwarding codes are resolved and not teated as errors", async ({
     request,
   }) => {

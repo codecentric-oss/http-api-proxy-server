@@ -211,6 +211,7 @@ const convertToAxiosRequestConfig = async (
   url: `${port === "443" ? "https" : "http"}://${host}${request.url}`,
   method: request.method,
   data: request.body,
+  validateStatus: (status) => status >= 200 && status < 300 || status >= 400 && status < 500
 });
 
 /** @description Snapshots responses for request and provide them as stubs. */
