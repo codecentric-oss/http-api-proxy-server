@@ -9,27 +9,30 @@ on:
 jobs:
   quality-check:
     name: Lint, Test and Build
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x, 'lts/*']
-        os: [ubuntu-latest]
+        container: 
+          - node:18-bullseye
+          - node:20-bullseye
+          - node:22-bullseye
+          - node:lts-bullseye
+    container: ${{ matrix.container }}
     steps:
       - name: Cloning GitHub Repository
         uses: actions/checkout@v3
 
-      - name: Setting up NodeJS environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          registry-url: https://registry.npmjs.org/
+      - name: Install system dependencies for Playwright
+        run: |
+          apt-get update
+          apt-get install -y wget gnupg ca-certificates fonts-liberation libappindicator3-1 libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdbus-1-3 libdrm2 libgbm1 libnspr4 libnss3 libxcomposite1 libxdamage1 libxrandr2 xdg-utils libxshmfence1 libxss1 libxtst6 libu2f-udev
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install
 
       - name: Run linter
         run: npm run lint
@@ -48,11 +51,6 @@ jobs:
       - name: Cloning GitHub Repository
         uses: actions/checkout@v3
 
-      - name: Setting up NodeJS environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: 'lts/*'
-
       - name: Install dependencies
         run: npm ci
 
@@ -60,5 +58,4 @@ jobs:
         run: npm run semantic-release
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GITHUB_TOKEN }}
-
+          GH_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GITHUB_TOKEN }}
