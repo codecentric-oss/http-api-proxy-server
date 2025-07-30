@@ -54,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set up git remote with token
+        run: git remote set-url origin https://x-access-token:${{ secrets.SEMANTIC_RELEASE_GITHUB_TOKEN }}@github.com/codecentric-oss/http-api-proxy-server.git
+      
       - name: Release
         run: npm run semantic-release
         env:
