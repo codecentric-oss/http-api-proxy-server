@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { HttpApiProxyServer } from "../../src";
+import http from "http";
 import responseFor0258897338 from "./responses/responseFor0258897338.json";
 
 test.describe("Mocked API-Response to keep it the same for tests (without proxy server it changes over time)", () => {
@@ -98,17 +99,38 @@ test.describe("Mocked API-Error-Responses without spamming your APIs Error loggi
       });
     }
   });
+});
+
+test.describe("Mocked API-Error-Responses without spamming your APIs Error logging", () => {
+  const testPage = "duck.com";
+  const server = new HttpApiProxyServer({
+    cacheDirPath: ["use-cases", "tests", "error-responses"],
+    settings: {
+      proxyBehavior: "FORCE_UPDATE_ALL",
+      sourceHost: testPage,
+      sourcePort: 443,
+      proxyPort: 8080,
+    },
+  });
+  test.beforeAll(async () => await server.start());
+  test.afterAll(async () => await server.stop());
+
+  test("test page issues a redirect response", async ({ request }) => {
+    const response = await request.get(`https://${testPage}`, {
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBeGreaterThanOrEqual(300);
+    expect(response.status()).toBeLessThan(400);
+  });
 
   test("forwarding codes are resolved and not teated as errors", async ({
     request,
   }) => {
     let responseCode = 0;
     try {
-      responseCode = (
-        await request.get(`http://0.0.0.0:8080/status/${301}`)
-      ).status();
+      responseCode = (await request.get(`http://0.0.0.0:8080`)).status();
     } catch {
-      expect(responseCode).not.toBe(301);
+      expect(responseCode).toBe(200);
     }
     expect(responseCode).toBe(200);
   });
