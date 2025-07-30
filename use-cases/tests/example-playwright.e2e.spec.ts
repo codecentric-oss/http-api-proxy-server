@@ -50,7 +50,7 @@ test.describe("Mocked API-Error-Responses without spamming your APIs Error loggi
     cacheDirPath: ["use-cases", "tests", "error-responses"],
     settings: {
       proxyBehavior: "FORCE_UPDATE_ALL",
-      sourceHost: "httpbin.org",
+      sourceHost: "postman-echo.com",
       sourcePort: 443,
       proxyPort: 8080,
     },
