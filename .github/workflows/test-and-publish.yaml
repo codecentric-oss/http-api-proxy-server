@@ -17,9 +17,9 @@ jobs:
     strategy:
       matrix:
         container: 
-          - node:18-bullseye
           - node:20-bullseye
           - node:22-bullseye
+          - node:24-bullseye
           - node:lts-bullseye
     container: ${{ matrix.container }}
     steps:
@@ -49,7 +49,7 @@ jobs:
   publish:
     name: Publish on main
     runs-on: ubuntu-latest
-    container: node:lts-bullseye
+    container: node:24-bullseye
     if: ${{ github.ref == 'refs/heads/main' }}
     needs: [quality-check]
     steps:

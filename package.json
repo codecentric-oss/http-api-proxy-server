@@ -7,7 +7,7 @@
     "url": "https://github.com/codecentric-oss/http-api-proxy-server"
   },
   "engines": {
-    "node": ">=16.x"
+    "node": ">=20.x"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@playwright-testing-library/test": "^4.0.1",
-    "@playwright/test": "1.28.1",
+    "@playwright/test": "^1.58.1",
     "@types/jest": "^29.5.3",
     "commitizen": "^4.3.0",
     "concurrently": "^8.2.1",
