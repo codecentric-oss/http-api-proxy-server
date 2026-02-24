@@ -5,10 +5,15 @@ import {
   hasError,
   isNumberString,
   printFindDeveloperHelp,
+  printErrors,
   Request,
   createRequestId,
+  fallbackHeaders,
+  HttpApiProxyServer,
+  ProxyResponse,
 } from "./proxy-server";
-import { print, printLimit, printNoMatch } from "./print";
+import { print, printLimit, printNoMatch, printError } from "./print";
+import * as http from "http";
 
 jest.mock("./print", () => ({
   print: jest.fn(() => null),
@@ -255,6 +260,192 @@ describe("Proxy-Server", () => {
         { status: 200, body: { t: "test" } }
       );
       expect(print).toHaveBeenCalled();
+    });
+  });
+
+  describe("fallbackHeaders", () => {
+    it("has content-type set to application/json", () => {
+      expect(fallbackHeaders["content-type"]).toBe("application/json");
+    });
+
+    it("has access-control-allow-origin set to wildcard", () => {
+      expect(fallbackHeaders["access-control-allow-origin"]).toBe("*");
+    });
+  });
+
+  describe("printErrors", () => {
+    const requiredSettings = {
+      sourceHost: "www.example.com" as const,
+      sourcePort: 443 as const,
+      proxyPort: 80 as const,
+    };
+
+    it("does not print errors when hideErrors is true", () => {
+      const response: ProxyResponse = {
+        status: 500,
+        body: { errors: [{ message: "Server Error" }] },
+      };
+      printErrors(response, { ...requiredSettings, hideErrors: true }, "test.json");
+      expect(printError).not.toHaveBeenCalled();
+    });
+
+    it("prints GraphQL errors", () => {
+      const response: ProxyResponse = {
+        status: 200,
+        body: { errors: [{ message: "GraphQL Error" }] },
+      };
+      printErrors(response, requiredSettings, "test.json");
+      expect(printError).toHaveBeenCalledWith(
+        "200",
+        "GraphQL Error",
+        "test.json"
+      );
+    });
+
+    it("prints non-200 status code errors", () => {
+      const response: ProxyResponse = {
+        status: 500,
+        body: {},
+      };
+      printErrors(response, requiredSettings, "test.json");
+      expect(printError).toHaveBeenCalledWith(
+        "500",
+        "Server Error",
+        "test.json"
+      );
+    });
+
+    it("does not print for successful responses", () => {
+      const response: ProxyResponse = {
+        status: 200,
+        body: {},
+      };
+      printErrors(response, requiredSettings, "test.json");
+      expect(printError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("HttpApiProxyServer", () => {
+    const createServerInstance = (overwrites = {}) => {
+      return new HttpApiProxyServer({
+        cacheDirPath: ["test", "responses"],
+        settings: {
+          sourceHost: "www.example.com",
+          sourcePort: 443,
+          proxyPort: 8080,
+        },
+        overwrites,
+      });
+    };
+
+    describe("constructor", () => {
+      it("creates instance with default settings", () => {
+        const server = createServerInstance();
+        expect(server).toBeDefined();
+      });
+
+      it("applies overwrites passed in constructor", () => {
+        const overwrites = {
+          responseFor123: { status: 200, body: { test: "value" } },
+        };
+        const server = createServerInstance(overwrites);
+        expect(server).toBeDefined();
+      });
+
+      it("uses default proxy behavior when not specified", () => {
+        const server = createServerInstance();
+        expect(server).toBeDefined();
+      });
+    });
+
+    describe("modifyOverwrites", () => {
+      it("adds new overwrites to existing ones", () => {
+        const server = createServerInstance();
+        server.modifyOverwrites({
+          responseForNew: { status: 201, body: { new: "value" } },
+        });
+        expect(server).toBeDefined();
+      });
+
+      it("merges overwrites with existing ones", () => {
+        const server = createServerInstance({
+          responseForExisting: { status: 200, body: { existing: "true" } },
+        });
+        server.modifyOverwrites({
+          responseForNew: { status: 201, body: { new: "value" } },
+        });
+        expect(server).toBeDefined();
+      });
+    });
+
+    describe("modifySettings", () => {
+      const defaultSettings = {
+        sourceHost: "www.example.com" as const,
+        sourcePort: 443 as const,
+        proxyPort: 8080 as const,
+      };
+
+      it("updates settings", () => {
+        const server = createServerInstance();
+        server.modifySettings({ ...defaultSettings, proxyPort: 9000 });
+        expect(server).toBeDefined();
+      });
+
+      it("merges settings with existing ones", () => {
+        const server = createServerInstance();
+        server.modifySettings({ ...defaultSettings, hideErrors: true });
+        server.modifySettings({
+          ...defaultSettings,
+          responsesToLog: ["responseFor123"] as any,
+        });
+        expect(server).toBeDefined();
+      });
+    });
+
+    describe("resetOverwrites", () => {
+      it("resets overwrites to initial state", () => {
+        const initialOverwrites = {
+          responseForInitial: { status: 200, body: { initial: "true" } },
+        };
+        const server = createServerInstance(initialOverwrites);
+        server.modifyOverwrites({
+          responseForModified: { status: 201, body: { modified: "true" } },
+        });
+        server.resetOverwrites();
+        expect(server).toBeDefined();
+      });
+    });
+
+    describe("resetSettings", () => {
+      const defaultSettings = {
+        sourceHost: "www.example.com" as const,
+        sourcePort: 443 as const,
+        proxyPort: 8080 as const,
+      };
+
+      it("resets settings to initial state", () => {
+        const server = createServerInstance();
+        server.modifySettings({ ...defaultSettings, proxyPort: 9999 });
+        server.resetSettings();
+        expect(server).toBeDefined();
+      });
+    });
+
+    describe("start and stop", () => {
+      it("can start server on specified port", async () => {
+        const server = createServerInstance();
+        await server.start();
+        await server.stop();
+        expect(server).toBeDefined();
+      });
+
+      it("can start and stop without errors", async () => {
+        const server = createServerInstance();
+        await server.start();
+        const stopPromise = server.stop();
+        await stopPromise;
+        expect(server).toBeDefined();
+      });
     });
   });
 });

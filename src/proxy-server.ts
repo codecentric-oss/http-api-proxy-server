@@ -330,7 +330,7 @@ export class HttpApiProxyServer {
           );
     }
     if (localResponse === null)
-      throw Error(`Faild to resolve request: ${JSON.stringify(request)}`);
+      throw Error(`Failed to resolve request: ${JSON.stringify(request)}`);
     return localResponse;
   };
 
