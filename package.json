@@ -50,7 +50,15 @@
     "tmp": "^0.2.3",
     "picomatch": "^4.0.4",
     "brace-expansion": "^3.0.2",
-    "minimatch": "^9.0.5"
+    "minimatch": "^9.0.5",
+    "tinyglobby": {
+      "picomatch": "^4.0.4"
+    },
+    "node-gyp": {
+      "tinyglobby": {
+        "picomatch": "^4.0.4"
+      }
+    }
   },
   "config": {
     "commitizen": {
